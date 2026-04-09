@@ -1,4 +1,10 @@
 omni_15.txt
 *.parquet
 omni_1min_data*.txt
+hro*.txt
 .codex
+
+*.pth
+
+__pycache__/
+.venv/
