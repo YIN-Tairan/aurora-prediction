@@ -1,2 +1,4 @@
 omni_15.txt
 *.parquet
+omni_1min_data*.txt
+.codex

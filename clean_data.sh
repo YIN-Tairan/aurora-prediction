@@ -1,6 +1,4 @@
-#!/bin/bash
-
-INPUT_FILE="omni_1min_data_1981_2025.txt"
+INPUT_FILE="hro_1981_2025_1min.txt"
 OUTPUT_FILE="omni_1min_cleaned.txt"
 
 echo "Starting to clean the dataset..."
@@ -8,22 +6,14 @@ echo "Starting to clean the dataset..."
 awk '{
     # Check if the line is a valid data line starting with a year (19xx or 20xx)
     if ($1 ~ /^(19|20)[0-9]{2}$/) {
-        missing_count = 0;
         
-        # In your format, Column 1-4 are Time. Column 5 to 40 are Satellite Data. Column 41 is AE-index.
-        # We will count how many satellite data columns are missing (checking cols 5 through 40).
-        for (i = 5; i <= 40; i++) {
-            if ($i ~ /^9+\.?9*$/) {
-                missing_count++;
-            }
-        }
-        
-        # There are 36 satellite columns here. 
-        # If 34 or more of them are missing, we consider the line effectively empty.
-        if (missing_count >= 15) {
-            printf "Deleted empty line -> Year: %s, DOY: %s, Hour: %s, Minute: %s (AE-index was %s)\n", $1, $2, $3, $4, $41 > "/dev/stderr"
+        # In this format, Columns 1-4 are Time. Columns 5 to 50 are Data.
+        # We check if BOTH column 5 and column 6 indicate missing data (composed of 9s).
+        if ($5 ~ /^9+\.?9*$/ && $6 ~ /^9+\.?9*$/) {
+            # Delete the line (by not printing it) and log it to stderr
+            printf "Deleted empty line -> Year: %s, DOY: %s, Hour: %s, Minute: %s (Col 5: %s, Col 6: %s)\n", $1, $2, $3, $4, $5, $6 > "/dev/stderr"
         } else {
-            # Print lines that have actual satellite data
+            # Keep the line if at least one of them has valid data
             print $0
         }
     } else {

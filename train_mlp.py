@@ -21,8 +21,11 @@ class OMNISequenceDataset(Dataset):
         self.window_size = self.input_mins + self.predict_mins 
         self.stride = stride_mins
         
-        feature_cols = [col for col in self.df.columns if col != 'Segment_ID']
+        # Exclude Segment_ID and columns named '4' through '12'
+        exclude_cols = {'Segment_ID'} | {str(i) for i in range(3, 10)}  # '3' to '9' inclusive
+        feature_cols = [col for col in self.df.columns if col not in exclude_cols]
         self.num_features = len(feature_cols)
+        print(f"特征列数 (不含 Segment_ID 和 '3'-'9'): {self.num_features}")
         
         # --- 核心修复：特征归一化 (Standardization) ---
         print("正在进行特征标准化 (Mean=0, Std=1)... 解决 NaN 问题")
