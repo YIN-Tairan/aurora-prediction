@@ -11,7 +11,7 @@ The prediction system uses machine learning and deep learning approaches to lear
 ```
 aurora-prediction/
 ├── get_data_from_nasa.sh       # Download high-resolution OMNI data from NASA
-├── get_data_from_noaa.sh       # Download OMNI data (1-minute resolution, 1981-2025)
+├── get_data_from_noaa.sh       # Download OMNI data from NASA OMNIWeb (1-minute resolution, 1981-2025)
 ├── clean_data.sh               # Data cleaning script (removes invalid entries)
 ├── omni_process.py             # Data processing and preparation for PyTorch
 ├── SimpleDataset.py            # PyTorch Dataset class for sequence data
@@ -35,12 +35,13 @@ bash get_data_from_nasa.sh
 - Variables include magnetic field (BX, BY, BZ), plasma parameters (velocity, density, temperature), and geomagnetic indices (AE, AL, AU, SYM/D, SYM/H, etc.)
 - Output: `hro_1981_2025_1min.txt`
 
-**Option 2: NOAA OMNI Data**
+**Option 2: NASA OMNIWeb Data**
 ```bash
 bash get_data_from_noaa.sh
 ```
-- Similar 1-minute resolution data
-- Output: `omni_1min_data_1964_2025.txt`
+- Downloads 1-minute resolution data from NASA OMNIWeb (1981-2025)
+- Note: Script downloads data from 1981-2025, though output filename indicates 1964-2025
+- Output: `omni_1min_data_1964_2025.txt` (actual data range: 1981-2025)
 
 **Key Features:**
 - Automatic year-by-year downloading with rate limiting
@@ -56,9 +57,10 @@ bash clean_data.sh
 ```
 
 **Cleaning Process:**
-- Identifies and removes rows where both primary data columns (columns 5 and 6) contain missing value flags (999, 9999, etc.)
-- Preserves rows with at least one valid measurement
-- Filters out HTML headers and footers from raw downloads
+- Checks columns 5 and 6 (spacecraft ID columns in OMNI format)
+- Removes rows where both columns 5 and 6 contain missing value flags (e.g., 999, 9999)
+- Preserves rows where at least one of these columns has valid data
+- Non-data lines (HTML headers, footers) are kept in the output
 - Output: `omni_1min_cleaned.txt`
 
 ### Step 3: Data Processing and Preparation
@@ -74,15 +76,17 @@ python omni_process.py
 2. **Missing Value Handling**: Replaces OMNI missing value flags (99, 999, 9999, etc.) with NaN
 3. **Resampling**: Ensures uniform 1-minute time intervals
 4. **Linear Interpolation**: Fills small gaps (up to 15 minutes) using linear interpolation
-5. **Sliding Window Creation**: Prepares data segments (default: 3 days input + 3 hours prediction = 4500 minutes total)
-6. **Feature Selection**: Excludes time-related and spacecraft ID columns from feature set
+5. **Feature Selection**: Excludes time-related and spacecraft ID columns from feature set
+6. **Parquet Export**: Saves processed segments with `Segment_ID` for training
+
+**Note**: Sliding window creation (3 days input + 3 hours prediction) is handled by `SimpleDataset.py` during model training, not by this processing script.
 
 **Configuration Parameters (in `omni_process.py`):**
-- `INPUT_FILE`: Input data file path
+- `INPUT_FILE`: Input data file path (default: `'hro_data_sample.txt'` - **change this to your cleaned data file**, e.g., `'omni_1min_cleaned.txt'`)
 - `OUTPUT_PARQUET`: Output Parquet file (default: `omni_ready_for_pytorch.parquet`)
 - `MAX_MISSING_MINUTES`: Maximum allowed gap for interpolation (default: 15 minutes)
-- `WINDOW_DAYS`: Total window size in days (default: 3.125 days = 4500 minutes)
-- `STRIDE_MINUTES`: Sliding window stride (default: 10 minutes)
+- `WINDOW_DAYS`: Window size for segment validation (default: 3.125 days = 4500 minutes)
+- `STRIDE_MINUTES`: Stride for segment validation (default: 10 minutes)
 
 **Output:** 
 - `omni_ready_for_pytorch.parquet`: Processed data ready for model training
@@ -237,7 +241,13 @@ Contributions are welcome! Please feel free to submit issues or pull requests fo
 
 ## License
 
-This project is available for academic and research purposes.
+Copyright (c) Aurora Prediction contributors.
+
+Permission is granted to use, copy, modify, and distribute this project and its documentation for non-commercial academic and research purposes only, provided that this copyright notice and this permission notice are included in all copies or substantial portions of the project.
+
+Commercial use is not permitted without prior written permission from the copyright holders.
+
+THE PROJECT IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES, OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT, OR OTHERWISE, ARISING FROM, OUT OF, OR IN CONNECTION WITH THE PROJECT OR THE USE OR OTHER DEALINGS IN THE PROJECT.
 
 ## References
 
@@ -260,7 +270,7 @@ This project is available for academic and research purposes.
 ```
 aurora-prediction/
 ├── get_data_from_nasa.sh       # 从NASA下载高分辨率OMNI数据
-├── get_data_from_noaa.sh       # 下载OMNI数据（1分钟分辨率，1981-2025年）
+├── get_data_from_noaa.sh       # 从NASA OMNIWeb下载OMNI数据（1分钟分辨率，实际下载1981-2025年，输出文件名为omni_1min_data_1964_2025.txt）
 ├── clean_data.sh               # 数据清洗脚本（删除无效条目）
 ├── omni_process.py             # 数据处理和PyTorch准备
 ├── SimpleDataset.py            # PyTorch序列数据集类
@@ -284,12 +294,13 @@ bash get_data_from_nasa.sh
 - 变量包括磁场（BX、BY、BZ）、等离子体参数（速度、密度、温度）和地磁指数（AE、AL、AU、SYM/D、SYM/H等）
 - 输出：`hro_1981_2025_1min.txt`
 
-**选项2：NOAA OMNI数据**
+**选项2：NASA OMNIWeb数据**
 ```bash
 bash get_data_from_noaa.sh
 ```
-- 相似的1分钟分辨率数据
-- 输出：`omni_1min_data_1964_2025.txt`
+- 从NASA OMNIWeb下载1分钟分辨率数据（1981-2025年）
+- 注意：脚本下载1981-2025年的数据，虽然输出文件名显示1964-2025
+- 输出：`omni_1min_data_1964_2025.txt`（实际数据范围：1981-2025年）
 
 **主要特点：**
 - 按年份自动下载，带有速率限制
@@ -305,9 +316,10 @@ bash clean_data.sh
 ```
 
 **清洗过程：**
-- 识别并删除主要数据列（第5列和第6列）都包含缺失值标志（999、9999等）的行
-- 保留至少有一个有效测量值的行
-- 过滤原始下载中的HTML头部和尾部
+- 检查第5列和第6列（OMNI格式中的航天器ID列）
+- 当这两列都包含缺失值标志（如999、9999等）时删除该行
+- 若第5列或第6列中至少有一列不是缺失值标志，则保留该行
+- 非数据行（如原始下载中的HTML、表头或尾部内容）会被保留在输出中
 - 输出：`omni_1min_cleaned.txt`
 
 ### 步骤3：数据处理和准备
@@ -323,11 +335,13 @@ python omni_process.py
 2. **缺失值处理**：将OMNI缺失值标志（99、999、9999等）替换为NaN
 3. **重采样**：确保均匀的1分钟时间间隔
 4. **线性插值**：使用线性插值填补小间隙（最多15分钟）
-5. **滑动窗口创建**：准备数据段（默认：3天输入 + 3小时预测 = 4500分钟总计）
-6. **特征选择**：从特征集中排除时间相关列和航天器ID列
+5. **特征选择**：从特征集中排除时间相关列和航天器ID列
+6. **Parquet导出**：保存带有`Segment_ID`的处理后数据段供训练使用
+
+**注意**：滑动窗口创建（3天输入 + 3小时预测）由模型训练时的`SimpleDataset.py`处理，而非此处理脚本。
 
 **配置参数（在`omni_process.py`中）：**
-- `INPUT_FILE`：输入数据文件路径
+- `INPUT_FILE`：输入数据文件路径（默认：`'hro_data_sample.txt'` - **请将此更改为您的清洗后数据文件**，例如`'omni_1min_cleaned.txt'`）
 - `OUTPUT_PARQUET`：输出Parquet文件（默认：`omni_ready_for_pytorch.parquet`）
 - `MAX_MISSING_MINUTES`：插值允许的最大间隙（默认：15分钟）
 - `WINDOW_DAYS`：总窗口大小（天）（默认：3.125天 = 4500分钟）
